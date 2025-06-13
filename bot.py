@@ -3,6 +3,7 @@ import os
 from telegram.ext import Application, CommandHandler
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
+bot = telebot.TeleBot(BOT_TOKEN)
 
 async def start(update, context):
     await update.message.reply_text("🚀 Bot is live and working 24x7!")
