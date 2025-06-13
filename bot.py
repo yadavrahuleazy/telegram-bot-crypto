@@ -1,18 +1,18 @@
-
+import telebot
 import os
-from telegram.ext import Application, CommandHandler
 
+# Bot token ko environment variable se le rahe hain
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
+
+# Bot instance create
 bot = telebot.TeleBot(BOT_TOKEN)
 
-async def start(update, context):
-    await update.message.reply_text("🚀 Bot is live and working 24x7!")
+# Start command handle karna
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    bot.reply_to(message, "🤖 Bot is live and working 24x7!")
 
-def main():
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    print("✅ Bot is running 24x7...")
-    app.run_polling()
-
+# Main polling function
 if __name__ == "__main__":
-    main()
+    print("✅ Bot is running 24x7...")
+    bot.infinity_polling()
