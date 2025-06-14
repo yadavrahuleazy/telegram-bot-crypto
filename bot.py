@@ -1,34 +1,58 @@
-import telebot
-import os
 from flask import Flask, request
+from telegram import Bot, Update
+from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
+import os
 
-# Bot token environment variable se le rahe hain
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+# ====== CONFIGURATION ======
+TOKEN = '7988749647:AAGHOYfMTdza4Pj1_emDEhb8LX1IGKwtagU'
+WEBHOOK_URL = 'https://telegram-bot-crypto.onrender.com/'  # 👈 Replace with your actual Render URL
+CHANNEL_USERNAME = '@waytomillionaire32'  # 👈 Your Telegram channel
+# ===========================
 
-# Bot instance create
-bot = telebot.TeleBot(BOT_TOKEN)
-
-# Flask app banaya
+# Initialize Flask app
 app = Flask(__name__)
 
-# Start command handle karna
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "✅ Bot is live and working 24x7 on Render!")
+# Initialize Bot
+bot = Bot(token=TOKEN)
 
-# Telegram ka webhook data handle karna
-@app.route(f"/{BOT_TOKEN}", methods=["POST"])
-def receive_update():
-    update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
-    bot.process_new_updates([update])
-    return "OK", 200
+# Set up Dispatcher
+dp = Dispatcher(bot=bot, update_queue=None, workers=4, use_context=True)
 
-# Root route check
-@app.route("/", methods=["GET"])
-def home():
-    return "🔥 Crypto Bot is deployed and running!", 200
+# ======= Command Handlers ========
+def start(update, context):
+    update.message.reply_text("🚀 Bot is working perfectly!")
 
-# Bot polling (Render ke liye optional hai — webhook zyada preferred)
-if __name__ == "__main__":
-    print("✅ Bot is running 24x7 via webhook...")
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+def help_command(update, context):
+    update.message.reply_text("🤖 Available commands:\n/start - Start the bot\n/help - Help info")
+
+def handle_message(update, context):
+    user_message = update.message.text
+    update.message.reply_text(f"👋 You said: {user_message}")
+# =================================
+
+# Register handlers
+dp.add_handler(CommandHandler("start", start))
+dp.add_handler(CommandHandler("help", help_command))
+dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+
+# === Webhook Route ===
+@app.route(f'/{TOKEN}', methods=['POST'])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), bot)
+    dp.process_update(update)
+    return "ok"
+
+# === Health Check Route ===
+@app.route('/')
+def index():
+    return "Bot is live ✅"
+
+# === Set webhook when app starts ===
+@app.before_first_request
+def setup_webhook():
+    bot.delete_webhook()
+    bot.set_webhook(url=WEBHOOK_URL + TOKEN)
+
+# === Main ===
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
