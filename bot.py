@@ -1,58 +1,55 @@
 from flask import Flask, request
-from telegram import Bot, Update
+import telegram
+from telegram import Update
 from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
-import os
 
-# ====== CONFIGURATION ======
-TOKEN = '7988749647:AAGHOYfMTdza4Pj1_emDEhb8LX1IGKwtagU'
-WEBHOOK_URL = 'https://telegram-bot-crypto.onrender.com/'  # 👈 Replace with your actual Render URL
-CHANNEL_USERNAME = '@waytomillionaire32'  # 👈 Your Telegram channel
-# ===========================
+# === Configuration ===
+TOKEN = '7988749647:AAGHOYfMTdza4Pj1_emDEhb8LX1IGKwtagU'  # 🔐 Replace with your bot token
+URL = 'https://telegram-bot-crypto.onrender.com/'          # 🌐 Replace with your Render service URL
+CHANNEL = '@waytomillionaire32'                            # 📢 Replace with your Telegram channel
 
-# Initialize Flask app
+# === Initialize App & Bot ===
 app = Flask(__name__)
+bot = telegram.Bot(token=TOKEN)
 
-# Initialize Bot
-bot = Bot(token=TOKEN)
-
-# Set up Dispatcher
-dp = Dispatcher(bot=bot, update_queue=None, workers=4, use_context=True)
-
-# ======= Command Handlers ========
+# === Commands ===
 def start(update, context):
-    update.message.reply_text("🚀 Bot is working perfectly!")
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text="🚀 Bot is working perfectly!")
 
 def help_command(update, context):
-    update.message.reply_text("🤖 Available commands:\n/start - Start the bot\n/help - Help info")
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text="🤖 Available commands:\n/start - Start the bot\n/help - List commands")
 
 def handle_message(update, context):
     user_message = update.message.text
-    update.message.reply_text(f"👋 You said: {user_message}")
-# =================================
+    context.bot.send_message(chat_id=update.effective_chat.id,
+                             text=f"👋 You said: {user_message}")
 
-# Register handlers
-dp.add_handler(CommandHandler("start", start))
-dp.add_handler(CommandHandler("help", help_command))
-dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+# === Set Webhook ===
+@app.route('/setwebhook', methods=['GET', 'POST'])
+def set_webhook():
+    s = bot.setWebhook(f"{URL}{TOKEN}")
+    return "Webhook set!" if s else "Webhook setup failed."
 
-# === Webhook Route ===
+# === Main Webhook Route ===
 @app.route(f'/{TOKEN}', methods=['POST'])
 def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
+    update = telegram.Update.de_json(request.get_json(force=True), bot)
+    dp = Dispatcher(bot, None, workers=0, use_context=True)
+
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("help", help_command))
+    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+
     dp.process_update(update)
-    return "ok"
+    return 'ok'
 
-# === Health Check Route ===
+# === Root Route ===
 @app.route('/')
-def index():
-    return "Bot is live ✅"
+def home():
+    return '🤖 Crypto Bot is running!'
 
-# === Set webhook when app starts ===
-@app.before_first_request
-def setup_webhook():
-    bot.delete_webhook()
-    bot.set_webhook(url=WEBHOOK_URL + TOKEN)
-
-# === Main ===
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 10000)))
+# === Run App (Only for local testing, not used in Render) ===
+if __name__ == "__main__":
+    app.run(debug=False)
