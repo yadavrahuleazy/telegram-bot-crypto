@@ -1,2 +1,1 @@
-pip install python-telegram-bot==20.8
-python bot.py
+python-telegram-bot==20.8
