@@ -1,51 +1,22 @@
-from flask import Flask, request
-from telegram import Bot, Update
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
-# === Configuration ===
-TOKEN = "7988749647:AAGHOYfMTdza4Pj1_emDEhb8LX1IGKwtagU"
-URL = "https://telegram-bot-crypto.onrender.com/"  # ✅ Your Render App URL
-CHANNEL = "@waytomillionaire32"  # ✅ Your Telegram Channel
+TOKEN = "7988749647:AAGHOYfMTdza4Pj1_emDEhb8LX1IGKwtagU"  # Apna actual token
 
-# === Initialize App & Bot ===
-app = Flask(__name__)
-bot = Bot(token=TOKEN)
+# /start command ka handler
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("✅ Bot is working! Type something...")
 
-# === Commands ===
-def start(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="🚀 Bot is working perfectly!")
+# Normal message reply
+async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(f"You said: {update.message.text}")
 
-def help_command(update, context):
-    context.bot.send_message(chat_id=update.effective_chat.id, text="✅ Available commands:\n/start - Start the bot\n/help - List commands")
+# Main function to start the bot
+if __name__ == "__main__":
+    app = ApplicationBuilder().token(TOKEN).build()
 
-def handle_message(update, context):
-    user_message = update.message.text
-    context.bot.send_message(chat_id=update.effective_chat.id, text=f"👋 You said: {user_message}")
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
 
-# === Set Webhook ===
-@app.route(f'/setwebhook', methods=["GET", "POST"])
-def set_webhook():
-    success = bot.set_webhook(f"{URL}{TOKEN}")
-    return "✅ Webhook set!" if success else "❌ Webhook setup failed."
-
-# === Main Webhook Route ===
-@app.route(f'/{TOKEN}', methods=["POST"])
-def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    dp = Dispatcher(bot, None, workers=0, use_context=True)
-    
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("help", help_command))
-    dp.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
-
-    dp.process_update(update)
-    return 'ok'
-
-# === Root Route for health check ===
-@app.route('/')
-def home():
-    return '✅ Crypto Bot is running on Render!'
-
-# === Local testing only ===
-if __name__ == '__main__':
-    app.run(debug=False)
+    print("🤖 Bot is running...")
+    app.run_polling()
